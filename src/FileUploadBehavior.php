@@ -144,8 +144,8 @@ class FileUploadBehavior extends \yii\base\Behavior
     {
         $path = Yii::getAlias($path);
 
-        $pi = pathinfo($this->owner->{$this->attribute});
-        $fileName = isset($pi['filename']) ? $pi['filename'] : "";
+        $pi = pathinfo($this->owner->{$this->attribute}) ?: "";
+        $fileName = ArrayHelper::getValue($pi, 'filename');
         $extension = isset($pi['extension']) ? strtolower($pi['extension']) : "";
 
         $replacements = array(
