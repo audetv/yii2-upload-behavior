@@ -1,5 +1,5 @@
 {
-  "name": "yii-dream-team/yii2-upload-behavior",
+  "name": "audetv/yii2-upload-behavior",
   "type": "yii2-extension",
   "description": "Yii2 file/image upload behavior for ActiveRecord",
   "keywords": [
@@ -17,6 +17,11 @@
       "name": "Alexey Samoylov",
       "email": "alexey.samoylov@gmail.com",
       "homepage": "http://yiidreamteam.com/team/alexey",
+      "role": "Developer"
+    },
+    {
+      "name": "Alexey Gusev",
+      "email": "audetv@gmail.com",
       "role": "Developer"
     }
   ],
