@@ -138,44 +138,53 @@ class FileUploadBehavior extends \yii\base\Behavior
     {
         $path = Yii::getAlias($path);
 
-        $pi = isset($this->owner->{$this->attribute}) ? pathinfo($this->owner->{$this->attribute}) : "";
-        $fileName = ArrayHelper::getValue($pi, 'filename');
-        $extension = isset($pi['extension']) ? strtolower($pi['extension']) : "";
+        if (isset($this->owner->{$this->attribute})) {
+            $pi = pathinfo($this->owner->{$this->attribute});
+            $fileName = ArrayHelper::getValue($pi, 'filename');
+            $extension = strtolower(ArrayHelper::getValue($pi, 'extension'));
+        } else {
+            $fileName = null;
+            $extension = null;
+        }
 
-        $replacements = array(
-            'extension' => $extension,
-            'filename' => $fileName,
-            'basename' => implode('.', array_filter([$fileName, $extension])),
-            'app_root' => Yii::getAlias('@app'),
-            'web_root' => Yii::getAlias('@webroot'),
-            'base_url' => Yii::getAlias('@web'),
-            'model' => lcfirst((new \ReflectionClass($this->owner->className()))->getShortName()),
-            'attribute' => lcfirst($this->attribute),
-            'id' => lcfirst(implode('_', $this->owner->getPrimaryKey(true))),
-            'pk' => lcfirst(implode('_', $this->owner->getPrimaryKey(true))),
-            'id_path' => static::makeIdPath($this->owner->getPrimaryKey()),
-            'parent_id' => $this->owner->{$this->parentRelationAttribute},
-        );
-
-        $replaceAttribute = function ($name) use ($replacements) {
-            if (preg_match('/^attribute_(\w+)$/', $name, $matches)) {
-                $attribute = $matches[1];
+        return preg_replace_callback('|\[\[([\w\_/]+)\]\]|', function ($matches) use ($fileName, $extension) {
+            $name = $matches[1];
+            switch ($name) {
+                case 'extension':
+                    return $extension;
+                case 'filename':
+                    return $fileName;
+                case 'basename':
+                    return implode('.', array_filter([$fileName, $extension]));
+                case 'app_root':
+                    return Yii::getAlias('@app');
+                case 'web_root':
+                    return Yii::getAlias('@webroot');
+                case 'base_url':
+                    return Yii::getAlias('@web');
+                case 'model':
+                    $r = new \ReflectionClass($this->owner->className());
+                    return lcfirst($r->getShortName());
+                case 'attribute':
+                    return lcfirst($this->attribute);
+                case 'id':
+                case 'pk':
+                    $pk = implode('_', $this->owner->getPrimaryKey(true));
+                    return lcfirst($pk);
+                case 'id_path':
+                    return static::makeIdPath($this->owner->getPrimaryKey());
+                case 'parent_id':
+                    return $this->owner->{$this->parentRelationAttribute};
+            }
+            if (preg_match('|^attribute_(\w+)$|', $name, $am)) {
+                $attribute = $am[1];
                 return $this->owner->{$attribute};
             }
-            return '[[' . $name . ']]';
-        };
-
-        $replaceMd5Attribute = function ($name) use ($replacements) {
-            if (preg_match('/^md5_attribute_(\w+)$/', $name, $matches)) {
-                $attribute = $matches[1];
+            if (preg_match('|^md5_attribute_(\w+)$|', $name, $am)) {
+                $attribute = $am[1];
                 return md5($this->owner->{$attribute});
             }
             return '[[' . $name . ']]';
-        };
-
-        return preg_replace_callback('|\[\[([\w\_/]+)\]\]|', function ($matches) use ($replacements, $replaceAttribute, $replaceMd5Attribute) {
-            $name = $matches[1];
-            return isset($replacements[$name]) ? $replacements[$name] : ($replaceAttribute($name) ?: $replaceMd5Attribute($name));
         }, $path);
     }
 
