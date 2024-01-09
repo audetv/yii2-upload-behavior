@@ -134,17 +134,11 @@ class FileUploadBehavior extends \yii\base\Behavior
         @unlink($path);
     }
 
-    /**
-     * Replaces all placeholders in path variable with corresponding values
-     *
-     * @param string $path
-     * @return string
-     */
     public function resolvePath($path)
     {
         $path = Yii::getAlias($path);
 
-        $pi = pathinfo($this->owner->{$this->attribute}) ?: "";
+        $pi = isset($this->owner->{$this->attribute}) ? pathinfo($this->owner->{$this->attribute}) : "";
         $fileName = ArrayHelper::getValue($pi, 'filename');
         $extension = isset($pi['extension']) ? strtolower($pi['extension']) : "";
 
