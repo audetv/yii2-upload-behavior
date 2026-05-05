@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @author Alexey Samoylov <alexey.samoylov@gmail.com>
  * @link http://yiidreamteam.com/yii2/upload-behavior
@@ -6,7 +7,6 @@
 
 namespace yiidreamteam\upload;
 
-use PHPThumb\GD;
 use yii\helpers\ArrayHelper;
 use yii\helpers\FileHelper;
 
@@ -122,27 +122,36 @@ class ImageUploadBehavior extends FileUploadBehavior
     /**
      * Creates image thumbnails
      */
-    public function createThumbs()
+    public function createThumbs(): void
     {
         $path = $this->getUploadedFilePath($this->attribute);
+        $manager = new \Intervention\Image\ImageManager(
+            new \Intervention\Image\Drivers\Gd\Driver()
+        );
+
         foreach ($this->thumbs as $profile => $config) {
             $thumbPath = static::getThumbFilePath($this->attribute, $profile);
-            if (is_file($path) && !is_file($thumbPath)) {
+            if (!is_file($path) || is_file($thumbPath)) {
+                continue;
+            }
 
-                // setup image processor function
+            try {
+                $image = $manager->read($path);
+
                 if (isset($config['processor']) && is_callable($config['processor'])) {
-                    $processor = $config['processor'];
-                    unset($config['processor']);
+                    $config['processor']($image, $config);
                 } else {
-                    $processor = function (GD $thumb) use ($config) {
-                        $thumb->adaptiveResize($config['width'], $config['height']);
-                    };
+                    $width = (int)($config['width'] ?? 0);
+                    $height = (int)($config['height'] ?? 0);
+                    if ($width > 0 || $height > 0) {
+                        $image->cover($width ?: null, $height ?: null);
+                    }
                 }
 
-                $thumb = new GD($path, $config);
-                call_user_func($processor, $thumb, $this->attribute);
                 FileHelper::createDirectory(pathinfo($thumbPath, PATHINFO_DIRNAME), 0775, true);
-                $thumb->save($thumbPath);
+                $image->save($thumbPath);
+            } catch (\Throwable $e) {
+                \Yii::error("Thumbnail creation failed for {$profile}: " . $e->getMessage(), __METHOD__);
             }
         }
     }
