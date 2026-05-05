@@ -143,7 +143,14 @@ class ImageUploadBehavior extends FileUploadBehavior
                 } else {
                     $width = (int)($config['width'] ?? 0);
                     $height = (int)($config['height'] ?? 0);
-                    $image->cover($width, $height);
+
+                    if ($width > 0 && $height > 0) {
+                        $image->cover($width, $height);
+                    } elseif ($width > 0) {
+                        $image->scale(width: $width);
+                    } elseif ($height > 0) {
+                        $image->scale(height: $height);
+                    }
                 }
 
                 FileHelper::createDirectory(pathinfo($thumbPath, PATHINFO_DIRNAME), 0775, true);
@@ -153,6 +160,7 @@ class ImageUploadBehavior extends FileUploadBehavior
             }
         }
     }
+    
     /**
      * After file save event handler.
      */
