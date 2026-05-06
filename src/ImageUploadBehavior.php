@@ -125,39 +125,49 @@ class ImageUploadBehavior extends FileUploadBehavior
     public function createThumbs(): void
     {
         $path = $this->getUploadedFilePath($this->attribute);
-        $manager = new \Intervention\Image\ImageManager(
-            new \Intervention\Image\Drivers\Gd\Driver()
-        );
+        
+        // Повышаем лимит памяти на время обработки
+        $currentLimit = ini_get('memory_limit');
+        ini_set('memory_limit', '2G');
+        
+        try {
+            $manager = new \Intervention\Image\ImageManager(
+                new \Intervention\Image\Drivers\Imagick\Driver()
+            );
 
-        foreach ($this->thumbs as $profile => $config) {
-            $thumbPath = static::getThumbFilePath($this->attribute, $profile);
-            if (!is_file($path) || is_file($thumbPath)) {
-                continue;
-            }
-
-            try {
-                $image = $manager->read($path);
-
-                if (isset($config['processor']) && is_callable($config['processor'])) {
-                    $config['processor']($image, $config);
-                } else {
-                    $width = (int)($config['width'] ?? 0);
-                    $height = (int)($config['height'] ?? 0);
-
-                    if ($width > 0 && $height > 0) {
-                        $image->cover($width, $height);
-                    } elseif ($width > 0) {
-                        $image->scale(width: $width);
-                    } elseif ($height > 0) {
-                        $image->scale(height: $height);
-                    }
+            foreach ($this->thumbs as $profile => $config) {
+                $thumbPath = static::getThumbFilePath($this->attribute, $profile);
+                if (!is_file($path) || is_file($thumbPath)) {
+                    continue;
                 }
 
-                FileHelper::createDirectory(pathinfo($thumbPath, PATHINFO_DIRNAME), 0775, true);
-                $image->save($thumbPath);
-            } catch (\Throwable $e) {
-                \Yii::error("Thumbnail creation failed for {$profile}: " . $e->getMessage(), __METHOD__);
+                try {
+                    $image = $manager->read($path);
+
+                    if (isset($config['processor']) && is_callable($config['processor'])) {
+                        $config['processor']($image, $config);
+                    } else {
+                        $width = (int)($config['width'] ?? 0);
+                        $height = (int)($config['height'] ?? 0);
+
+                        if ($width > 0 && $height > 0) {
+                            $image->cover($width, $height);
+                        } elseif ($width > 0) {
+                            $image->scale(width: $width);
+                        } elseif ($height > 0) {
+                            $image->scale(height: $height);
+                        }
+                    }
+
+                    FileHelper::createDirectory(pathinfo($thumbPath, PATHINFO_DIRNAME), 0775, true);
+                    $image->save($thumbPath);
+                } catch (\Throwable $e) {
+                    \Yii::error("Thumbnail creation failed for {$profile}: " . $e->getMessage(), __METHOD__);
+                }
             }
+        } finally {
+            // Возвращаем исходный лимит
+            ini_set('memory_limit', $currentLimit);
         }
     }
     
